@@ -1,0 +1,14 @@
+﻿.venv/
+data/
+runs/
+__pycache__/
+*.pyc
+.env
+*.log
+*.err
+tests/real_car/
+CLAUDE.md
+SPEC.md
+SPEC-1WEEK.md
+*.pt
+!weights/best.pt
