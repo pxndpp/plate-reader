@@ -63,7 +63,6 @@ def clean_registration(text):
 
 
 def clean_province(text):
-    # ponytail: no snapping to the 77 provinces yet (day 6, if time) - raw Thai text only.
     return re.sub(r"\s+", " ", re.sub(r"[^ก-๛ ]", "", text)).strip()
 
 
@@ -115,7 +114,7 @@ if __name__ == "__main__":
         sys.exit(f"cannot read {sys.argv[1]}")
     found = read_plates(img)
     if not found:
-        print("ไม่พบป้ายทะเบียน")
+        print("Plate not found")
     for p in found:
         print(f"det={p['detection_confidence']:.2f} read={p['reading_confidence']:.2f} "
               f"reg='{p['registration']}' province='{p['province']}' bbox={p['bbox']}")
