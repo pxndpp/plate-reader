@@ -4,7 +4,6 @@ import cv2
 from pipeline import read_plates
 
 def run(img_rgb):
-    
     if img_rgb is None:
         raise gr.Error("UPLOAD PIC FIRST KUB!")
     #แปลงสีจาก rgb เป็น bgr ก่อนเพราะ ai เรารับแค่ bgr แต่ ui เรารับเป็น rgb เดี๋ยวสีมันเพี้ยน
@@ -29,9 +28,12 @@ def draw_boxes(image_bgr, plates):
     thickness = max(2, out.shape[1] // 300)  # ภาพใหญ่ให้เส้นหนาขึ้น
     for number, plate in enumerate(plates, start=1):
         x1, y1, x2, y2 = plate["bbox"]
-        cv2.rectangle(out, (x1, y1), (x2, y2), (0, 200, 0), thickness)
-        cv2.putText(out, "Plate:"+str(number), (x1, max(y1 - 10, 30)),
-                    cv2.FONT_HERSHEY_SIMPLEX, thickness / 2, (0, 200, 0), thickness)
+        if plate["detection_confidence"] < 0.5:
+            cv2.rectangle(out, (x1, y1), (x2, y2), (0, 0, 200), thickness) #pain it red when it conf below 50%
+            cv2.putText(out, "Plate:"+str(number), (x1, max(y1 - 10, 30)), cv2.FONT_HERSHEY_SIMPLEX, thickness / 2, (0, 0, 200), thickness)
+        else: 
+            cv2.rectangle(out, (x1, y1), (x2, y2), (0, 200, 0), thickness) #when it's more than 50% conf it's a green ( ofc it is ;) )
+            cv2.putText(out, "Plate:"+str(number), (x1, max(y1 - 10, 30)), cv2.FONT_HERSHEY_SIMPLEX, thickness / 2, (0, 200, 0), thickness)
     return out
 
 
@@ -45,6 +47,7 @@ with gr.Blocks() as demo:
     table = gr.DataFrame(headers=["Plate no.","Plates", "Province", "Detection Confidence", "Read Confidence"], interactive=False)
     message = gr.Markdown("")
     gr.Button("Read this plate").click(run, inputs=photo, outputs=[result_photo, crops, table, message])
-
+    gr.ClearButton(photo, result_photo, crops, table, message)
+    
 if __name__ == "__main__":
     demo.launch()
