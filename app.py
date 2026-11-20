@@ -38,7 +38,7 @@ def draw_boxes(image_bgr, plates):
 
 
 with gr.Blocks() as demo:
-    gr.Markdown("THAI PLATE READER")
+    gr.Markdown("THAI PLATE READER (recommended to use the HQ pic for better result kub!)")
     with gr.Row():
         photo = gr.Image(label="Car pic", type="numpy")
         result_photo = gr.Image(label="Plates that's found!")
