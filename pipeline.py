@@ -5,6 +5,7 @@ CLI check: python pipeline.py photo.jpg
 """
 import re
 import sys
+import math
 from functools import lru_cache
 
 import cv2
@@ -39,7 +40,8 @@ def group_lines(results):
     for box, text, conf in results:
         ys = [p[1] for p in box]
         xs = [p[0] for p in box]
-        items.append({"cy": sum(ys) / 4, "h": max(ys) - min(ys), "x": min(xs), "text": text, "conf": conf})
+        # เปลี่ยนให้ h ไปวัดค่าความสูงจากขอบป้ายแทน การแยกชัั้นของทะเบียนกับจังหวัดจะได้ไม่บวมจนรวมกันเวลาเอียง
+        items.append({"cy": sum(ys) / 4, "h": math.dist(box[0], box[3]), "x": min(xs), "text": text, "conf": conf})
     items.sort(key=lambda i: i["cy"])
     lines, cur = [], [items[0]]
     for it in items[1:]:
