@@ -3,6 +3,8 @@
 The UI (app.py) and evaluate.py both call read_plates(); keep all pipeline logic here.
 CLI check: python pipeline.py photo.jpg
 """
+#TODO:ทำ evaluate.py ด้วยในอนาคต
+
 import re
 import sys
 import math
@@ -27,6 +29,8 @@ def _detector():
 @lru_cache(maxsize=1)
 def _reader():
     return easyocr.Reader(["th", "en"], gpu=True)  # falls back to CPU if no GPU
+    #OCR return เป็น box, text, conf
+    #box =[[TL],[TR],[BR],[BL]] x,y
 
 
 def group_lines(results):
@@ -39,23 +43,27 @@ def group_lines(results):
     items = []
     for box, text, conf in results:
         ys = [p[1] for p in box]
-        xs = [p[0] for p in box]
-        # เปลี่ยนให้ h ไปวัดค่าความสูงจากขอบป้ายแทน การแยกชัั้นของทะเบียนกับจังหวัดจะได้ไม่บวมจนรวมกันเวลาเอียง
-        items.append({"cy": sum(ys) / 4, "h": math.dist(box[0], box[3]), "x": min(xs), "text": text, "conf": conf})
-    items.sort(key=lambda i: i["cy"])
+        xs = [p[0] for p in box] #เก็บค่า x ของมุมทั้ง 4 มุม
+        
+        # เปลี่ยนให้ h ไปวัดด้วยค่าความสูงจากขอบป้ายแทน การแยกชัั้นของทะเบียนกับจังหวัดจะได้ไม่บวมจนรวมกันเวลาเอียง
+        #TODO: ต้องแก้ให้มันอ่านภาพที่เอียงออกด้วยการปรับมุมเอียงให้ของป้าย########################################################################
+        items.append({"cy": sum(ys) / 4, "h": math.dist(box[0], box[3]), "x": min(xs), "text": text, "conf": conf})  # x น้อยสุด = ขอบซ้ายสุด
+    items.sort(key=lambda i: i["cy"]) #เอาก้อนที่สแกนได้ทั้งหมดมาเรียงตาม cy น้อยไปมาก ไว้กันกรณีอ่านจังหวัดได้ก่อนทะเบียน
+    #โซนแยกบรรทัด(แยกทะเบียนออกจากจังหวัด)#####
     lines, cur = [], [items[0]]
-    for it in items[1:]:
-        # min(): tilted plates inflate token heights, max() would merge the province line into the registration
+    for it in items[1:]: #loop start ลำดับ 2
         if it["cy"] - cur[-1]["cy"] <= 0.5 * min(it["h"], cur[-1]["h"]):
             cur.append(it)
         else:
             lines.append(cur)
             cur = [it]
     lines.append(cur)
+    #โซนต่อข้อความ
     out = []
     for ln in lines:
-        ln.sort(key=lambda i: i["x"])
-        out.append((" ".join(i["text"] for i in ln), sum(i["conf"] for i in ln) / len(ln)))
+        ln.sort(key=lambda i: i["x"]) #เอามาเลียงลำดับตามค่า x น้อยสุด
+        out.append((" ".join(i["text"] for i in ln), sum(i["conf"] for i in ln) / len(ln))) 
+        #ต่อข้อความตามลำดับใหม่คั่นด้วยช่องว่าง
     return out
 
 
@@ -78,7 +86,11 @@ def read_crop(crop_bgr):
         return "", "", 0.0
     # top line = Registration; Province = next line (dealer stickers may follow it)
     reg = clean_registration(lines[0][0])
-    prov = clean_province(lines[1][0]) if len(lines) > 1 else ""
+    #กันระเบิดกรณีมันอ่านจังหวัดไม่ได้ ได้มาแค่ทะเบียน
+    if len(lines) > 1: 
+        prov = clean_province(lines[1][0])
+    else:
+        prov = ""
     return reg, prov, float(lines[0][1])
 
 
@@ -90,7 +102,7 @@ def read_plates(image_bgr, imgsz=640):
         px, py = (x2 - x1) * PAD, (y2 - y1) * PAD
         a, b = max(0, int(x1 - px)), max(0, int(y1 - py))
         c, d = min(W, int(x2 + px)), min(H, int(y2 + py))
-        crop = image_bgr[b:d, a:c]
+        crop = image_bgr[b:d, a:c] #y, x
         if crop.size == 0:
             continue
         reg, prov, rconf = read_crop(crop)
